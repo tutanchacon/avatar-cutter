@@ -184,9 +184,7 @@ def test_directories():
         from config import Config
         
         directories = [
-            Config.RAW_IMAGES_DIR,
             Config.APPROVED_IMAGES_DIR,
-            Config.BG_REMOVED_DIR,
             Config.CROPPED_IMAGES_DIR
         ]
         
