@@ -1,0 +1,14 @@
+include README.md
+include LICENSE
+include requirements.txt
+include .env.example
+recursive-include model *.prototxt *.caffemodel
+recursive-include avatar_formato* *.png
+exclude avatarprocess_env/**
+exclude p1_rawimages/**
+exclude p2_approvedimages/**
+exclude p3_bgremoved/**
+exclude p4_croppedimages/**
+exclude *.bat
+exclude *.zip
+exclude *.rar
