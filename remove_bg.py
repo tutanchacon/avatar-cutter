@@ -1,4 +1,3 @@
-from src.remove_bg_service import RemoveBgService
 from src.proportional_image_resizer import ProportionalImageResizer
 from src.face_detector import FaceDetector
 from src.image_processor import ImageProcessor
@@ -12,14 +11,14 @@ def main():
 
     os.makedirs(output_directory, exist_ok=True)
 
-    # Usar configuración segura para API key
-    api_key = Config.get_remove_bg_api_key()
-    background_remover = RemoveBgService(api_key=api_key)
+    print("🔧 Usando bgremover directamente para remover fondos")
+    print("=" * 50)
+    
     image_resizer = ProportionalImageResizer()
     face_detector = FaceDetector(cv2.data.haarcascades + Config.HAAR_CASCADE_PATH)
 
-    # proceso las imágenes para remover el fondo
-    processor = ImageProcessor(background_remover, image_resizer, face_detector)
+    # proceso las imágenes solo para remover el fondo
+    processor = ImageProcessor(image_resizer, face_detector)
     processor.remove_background_batch(input_directory, output_directory)
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+# Instalación de bgremover de tutanchacon
+# https://github.com/tutanchacon/bgremover
+
+# Dependencias específicas para bgremover
+rembg>=2.0.50
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Para instalación desde git (opcional)
+# git+https://github.com/tutanchacon/bgremover.git

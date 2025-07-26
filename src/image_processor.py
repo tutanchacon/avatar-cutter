@@ -1,15 +1,16 @@
 from src.avatar_size import AvatarSize
-from src.background_remover import BackgroundRemover
 from src.image_resizer import ImageResizer
 from src.face_detector import FaceDetector
 import os
+import tempfile
 from PIL import Image
+from bgremover_package import BackgroundRemover
 
 class ImageProcessor:
-    def __init__(self, background_remover: BackgroundRemover, image_resizer: ImageResizer, face_detector: FaceDetector):
-        self.background_remover = background_remover
+    def __init__(self, image_resizer: ImageResizer, face_detector: FaceDetector):
         self.image_resizer = image_resizer
         self.face_detector = face_detector
+        self.bg_remover = BackgroundRemover()
 
     def remove_background_batch(self, input_dir: str, output_dir: str) -> None:
         for root, _, files in os.walk(input_dir):
@@ -77,10 +78,87 @@ class ImageProcessor:
                     # guardo una copia de la imagen original
                     original_copy_path = os.path.join(final_path, f"original.png")
                     image.save(original_copy_path)
+    
+    def process_images_with_bgremover(self, input_dir: str, output_dir: str) -> None:
+        """Procesa imágenes removiendo fondo con bgremover y redimensionando."""
+        for root, _, files in os.walk(input_dir):
+            for filename in files:
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    relative_path = os.path.relpath(root, input_dir)
+                    output_subdir = os.path.join(output_dir, relative_path)
+                    os.makedirs(output_subdir, exist_ok=True)
                     
+                    image_path = os.path.join(root, filename)
+                    print(f"📸 Procesando: {image_path}")
+                    
+                    # Remover fondo con bgremover usando archivo temporal
+                    temp_dir = os.path.join(os.getcwd(), 'temp_bg_removal')
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_path = os.path.join(temp_dir, f"temp_{filename}")
+                        
+                    success = self.bg_remover.remove_background(image_path, temp_path)
+                    if success:
+                        image_with_bg_removed = Image.open(temp_path)
+                        # Crear una copia en memoria 
+                        image_copy = image_with_bg_removed.copy()
+                        image_with_bg_removed.close()
+                        image_with_bg_removed = image_copy
+                        # Limpiar archivo temporal
+                        try:
+                            os.remove(temp_path)
+                        except:
+                            pass
+                    else:
+                        print(f"❌ Error removiendo fondo de {image_path}")
+                        continue
+                    
+                    # calculo el directorio destino  
+                    filename_wo_ext = os.path.splitext(filename)[0]
+                    final_path = os.path.join(output_subdir, filename_wo_ext)
+
+                    # redimensiono la imagen al tamaño máximo de 204x350
+                    size = AvatarSize.S_204x350.value
+                    resized_image_1 = self._resize_image(image_with_bg_removed, size[2], size[3])
+                    
+                    # redimesiono la imagen al tamaño máximo de 136x234
+                    size = AvatarSize.S_136x234.value
+                    resized_image_2 = self._resize_image(image_with_bg_removed, size[2], size[3])
+
+                   
+                    # genero los recortes para 86x86 y 38x38 partiendo de la posición de la cara
+                    # pero si no es capaz de detectar la cara, no se generan los recortes y se loguea
+                    # Uso el método optimizado para avatares de cuerpo completo
+                    faceRect = self.face_detector.detect_face_center_rect_optimized(resized_image_1, (86, 86))
+                    if faceRect is not None:
+                        self._process_face(faceRect, resized_image_1, final_path)
+                    else:
+                        with open(os.path.join(output_dir, "log.txt"), "a") as log_file:
+                                log_file.write(f"no se pudo procesar: {filename}\n")
+                        # agrego el prefijo "error_" a output_dir y continúo el proceso+
+                        final_path = os.path.join(output_subdir, f"error_{filename_wo_ext}")
+                        
+                                                    
+                    # proceso las áreas del primer escalado
+                    self._process_rect(AvatarSize.S_204x350, resized_image_1, final_path)
+                    self._process_rect(AvatarSize.S_204x175, resized_image_1, final_path)
+                    # proceso las áreas del segundo escalado
+                    self._process_rect(AvatarSize.S_136x234, resized_image_2, final_path)
+                        
+                    faceRect = self.face_detector.detect_face_center_rect_optimized(resized_image_2, (38, 38))
+                    if faceRect is not None:
+                        self._process_face(faceRect, resized_image_2, final_path)
+                        
+                    # guardo una copia de la imagen original con fondo removido
+                    original_copy_path = os.path.join(final_path, f"original.png")
+                    image_with_bg_removed.save(original_copy_path)
+                    
+                    print(f"✅ Procesado: {final_path}")
                 
     def _remove_background(self, input_image_path: str, output_image_path: str) -> None:
-        self.background_remover.remove_background(input_image_path, output_image_path)
+        """Remueve el fondo usando bgremover directamente."""
+        success = self.bg_remover.remove_background(input_image_path, output_image_path)
+        if not success:
+            print(f"❌ Error removiendo fondo de {input_image_path}")
 
     def _resize_image(self, image: Image.Image, width: int, height: int) -> Image.Image:
         return image.resize((width, height), Image.LANCZOS)
