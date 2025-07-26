@@ -3,6 +3,7 @@ from src.image_resizer import ImageResizer
 from src.face_detector import FaceDetector
 import os
 import tempfile
+import time
 from PIL import Image
 from bgremover_package import BackgroundRemover
 
@@ -91,6 +92,9 @@ class ImageProcessor:
                     image_path = os.path.join(root, filename)
                     print(f"📸 Procesando: {image_path}")
                     
+                    # Iniciar timer para esta imagen
+                    img_start_time = time.time()
+                    
                     # Remover fondo con bgremover usando archivo temporal
                     temp_dir = os.path.join(os.getcwd(), 'temp_bg_removal')
                     os.makedirs(temp_dir, exist_ok=True)
@@ -152,7 +156,11 @@ class ImageProcessor:
                     original_copy_path = os.path.join(final_path, f"original.png")
                     image_with_bg_removed.save(original_copy_path)
                     
-                    print(f"✅ Procesado: {final_path}")
+                    # Calcular tiempo de procesamiento de esta imagen
+                    img_end_time = time.time()
+                    img_time = img_end_time - img_start_time
+                    
+                    print(f"✅ Procesado: {final_path} (⏱️ {img_time:.2f}s)")
                 
     def _remove_background(self, input_image_path: str, output_image_path: str) -> None:
         """Remueve el fondo usando bgremover directamente."""
